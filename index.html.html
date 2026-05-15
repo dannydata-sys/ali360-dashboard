@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.L.I. 360 - Client Performance Dashboard | Target Patients MD</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --tp-navy: #0f1d3a; --tp-navy-2: #14264d; --tp-blue: #1e88e5;
+    --tp-cyan: #00aeef; --tp-cyan-light: #4dd2ff; --tp-accent: #0072c6;
+    --tp-bg: #f4f7fb; --tp-card: #ffffff; --tp-text: #1a2238;
+    --tp-muted: #6b7a90; --tp-border: #e3eaf3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--tp-bg); color: var(--tp-text); min-height: 100vh; }
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: block; }
+
+  /* LOGIN */
+  #screen-login { background: radial-gradient(ellipse at top, #14264d 0%, #0f1d3a 50%, #050b1a 100%); color: white; display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; }
+  #screen-login.active { display: flex; }
+  #screen-login::before, #screen-login::after { content: ""; position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(0,174,239,0.25) 0%, transparent 70%); pointer-events: none; }
+  #screen-login::before { width: 600px; height: 600px; top: -200px; left: -200px; }
+  #screen-login::after { width: 700px; height: 700px; bottom: -250px; right: -250px; background: radial-gradient(circle, rgba(77,210,255,0.2) 0%, transparent 70%); }
+  .login-card { background: rgba(255,255,255,0.04); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.12); padding: 44px 40px; border-radius: 22px; width: 100%; max-width: 420px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); position: relative; z-index: 2; }
+  .login-logo { width: 130px; height: 130px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 10px 30px rgba(0,174,239,0.55)); }
+  .login-logo svg { width: 100%; height: 100%; display: block; }
+  .login-title { text-align: center; margin: 0 0 6px; font-size: 24px; letter-spacing: 1px; }
+  .login-sub { text-align: center; color: var(--tp-cyan-light); font-size: 11px; letter-spacing: 2px; margin-bottom: 28px; }
+  .login-field { margin-bottom: 16px; }
+  .login-field label { display: block; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--tp-cyan-light); margin-bottom: 6px; }
+  .login-field input { width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: white; padding: 12px 14px; border-radius: 10px; font-size: 14px; outline: none; transition: border-color .15s, background .15s; }
+  .login-field input:focus { border-color: var(--tp-cyan); background: rgba(255,255,255,0.13); }
+  .login-field input::placeholder { color: rgba(255,255,255,0.4); }
+  .login-btn { width: 100%; padding: 14px 18px; background: linear-gradient(135deg, #00aeef 0%, #1e88e5 100%); color: white; font-weight: 700; font-size: 14px; border: none; border-radius: 10px; cursor: pointer; letter-spacing: 1px; margin-top: 8px; transition: transform .12s, box-shadow .12s; box-shadow: 0 8px 24px rgba(0,174,239,0.35); }
+  .login-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,174,239,0.5); }
+  .login-helper { text-align: center; color: rgba(255,255,255,0.5); font-size: 12px; margin-top: 14px; }
+  .login-helper a { color: var(--tp-cyan-light); text-decoration: none; }
+  .login-footer { text-align: center; color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 30px; }
+  .login-error { background: rgba(220, 53, 69, 0.18); border: 1px solid rgba(255, 100, 100, 0.4); color: #ffb3b3; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; text-align: center; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+
+  /* TOPBAR */
+  #screen-clients .topbar, #screen-dashboard .topbar { background: linear-gradient(135deg, var(--tp-navy) 0%, var(--tp-navy-2) 60%, var(--tp-accent) 100%); color: white; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(15,29,58,0.18); flex-wrap: wrap; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-logo { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 4px 12px rgba(0,174,239,0.4)); }
+  .brand-logo svg { width: 100%; height: 100%; display: block; }
+  .brand-title { line-height: 1.1; }
+  .brand-title h1 { margin: 0; font-size: 22px; letter-spacing: 1px; font-weight: 800; }
+  .brand-title small { color: var(--tp-cyan-light); font-size: 12px; letter-spacing: 2px; }
+  .topbar-actions { display: flex; gap: 12px; align-items: center; }
+  .topbar-actions button, .topbar-actions select, .topbar-actions input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; outline: none; }
+  .topbar-actions input { min-width: 240px; }
+  .topbar-actions select option { color: #111; }
+  .topbar-actions button:hover { background: rgba(255,255,255,0.18); }
+  .user-badge { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255,255,255,0.08); border-radius: 24px; font-size: 13px; }
+  .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #00aeef, #1e88e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+
+  /* CLIENTS DIRECTORY */
+  .clients-body { padding: 28px 32px 60px 32px; max-width: 1500px; margin: 0 auto; }
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+  @media (max-width: 1100px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: white; border-radius: 14px; padding: 18px; border: 1px solid var(--tp-border); box-shadow: 0 4px 14px rgba(15,29,58,0.06); position: relative; overflow: hidden; }
+  .stat-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tp-cyan); }
+  .stat-card.green::before { background: #2ecc71; }
+  .stat-card.orange::before { background: #ff9933; }
+  .stat-card.purple::before { background: #8e6bff; }
+  .stat-card.red::before { background: #c0392b; }
+  .stat-card .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--tp-muted); }
+  .stat-card .stat-value { font-size: 26px; font-weight: 800; color: var(--tp-navy); margin: 6px 0 2px; }
+  .stat-card .stat-foot { font-size: 12px; font-weight: 600; color: #2ecc71; }
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .chip { padding: 7px 14px; background: white; border: 1px solid var(--tp-border); border-radius: 22px; font-size: 12px; font-weight: 600; color: var(--tp-text); cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .chip:hover { border-color: var(--tp-cyan); color: var(--tp-accent); }
+  .chip.active { background: var(--tp-accent); color: white; border-color: var(--tp-accent); }
+  .chip .count { background: rgba(255,255,255,0.25); border-radius: 10px; padding: 1px 7px; margin-left: 6px; font-size: 11px; }
+  .chip:not(.active) .count { background: var(--tp-bg); color: var(--tp-muted); }
+  .clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .client-card { background: white; border-radius: 14px; padding: 18px; border: 1px solid var(--tp-border); box-shadow: 0 3px 10px rgba(15,29,58,0.05); cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s; display: flex; flex-direction: column; }
+  .client-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15,29,58,0.12); border-color: var(--tp-cyan); }
+  .client-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+  .client-name { font-size: 15px; font-weight: 700; color: var(--tp-navy); line-height: 1.25; flex: 1; }
+  .client-id { font-size: 10px; color: var(--tp-muted); letter-spacing: 0.5px; margin-top: 2px; }
+  .spec-badge { display: inline-block; padding: 3px 9px; background: var(--tp-bg); color: var(--tp-accent); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 12px; white-space: nowrap; border: 1px solid var(--tp-border); margin-top: 4px; }
+  .client-dr-row { display: flex; align-items: center; justify-content: space-between; background: var(--tp-bg); padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
+  .dr-mini { display: flex; flex-direction: column; align-items: center; }
+  .dr-mini .dr-num { font-size: 22px; font-weight: 800; }
+  .dr-mini .dr-lbl { font-size: 9px; color: var(--tp-muted); letter-spacing: 1px; }
+  .dr-mini.init .dr-num { color: #e8731e; }
+  .dr-mini.curr .dr-num { color: #1e6b1e; }
+  .dr-arrow-small { color: var(--tp-cyan); font-size: 18px; }
+  .client-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cm-cell { background: #fafbfd; padding: 8px 10px; border-radius: 6px; text-align: center; }
+  .cm-cell .cm-lbl { font-size: 9px; color: var(--tp-muted); letter-spacing: 0.8px; text-transform: uppercase; }
+  .cm-cell .cm-val { font-size: 14px; font-weight: 700; color: var(--tp-navy); margin-top: 2px; }
+  .cm-cell .cm-val.green { color: #2ecc71; }
+  .client-cta { margin-top: 12px; text-align: center; color: var(--tp-accent); font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+  .no-results { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--tp-muted); }
+
+  /* DASHBOARD */
+  .tabs { background: white; padding: 0 32px; display: flex; gap: 4px; border-bottom: 1px solid var(--tp-border); overflow-x: auto; }
+  .tab-btn { padding: 16px 22px; background: none; border: none; font-size: 14px; font-weight: 600; color: var(--tp-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all .15s ease; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .tab-btn:hover { color: var(--tp-accent); }
+  .tab-btn.active { color: var(--tp-accent); border-bottom-color: var(--tp-cyan); }
+  .tab-btn .tab-num { background: var(--tp-bg); color: var(--tp-muted); width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .tab-btn.active .tab-num { background: var(--tp-cyan); color: white; }
+  #screen-dashboard main { padding: 28px 32px 60px 32px; max-width: 1400px; margin: 0 auto; }
+  .tab-panel { display: none; animation: fadeIn 0.35s ease; }
+  .tab-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .panel-header { margin-bottom: 22px; }
+  .panel-header h2 { margin: 0 0 6px 0; font-size: 26px; color: var(--tp-navy); }
+  .panel-header p { margin: 0; color: var(--tp-muted); font-size: 14px; }
+  .card { background: var(--tp-card); border-radius: 14px; padding: 22px; box-shadow: 0 4px 14px rgba(15,29,58,0.06); border: 1px solid var(--tp-border); }
+  .grid { display: grid; gap: 18px; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-5 { grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 1100px) { .grid-5 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 980px) { .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; } }
+  .dr-stage { text-align: center; position: relative; }
+  .dr-stage .stage-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--tp-muted); margin-bottom: 4px; }
+  .dr-stage .stage-date { font-size: 13px; color: var(--tp-accent); margin-bottom: 16px; font-weight: 600; }
+  .dr-donut { position: relative; width: 170px; height: 170px; margin: 0 auto 12px; }
+  .dr-donut svg { transform: rotate(-90deg); }
+  .dr-donut .dr-value { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; }
+  .dr-donut .dr-value .num { font-size: 44px; color: var(--tp-navy); line-height: 1; }
+  .dr-donut .dr-value .lbl { font-size: 10px; color: var(--tp-muted); letter-spacing: 2px; margin-top: 4px; }
+  .dr-stage .stage-caption { font-size: 13px; color: var(--tp-muted); margin-top: 6px; }
+  .kpi { background: white; border-radius: 14px; padding: 18px 22px; border: 1px solid var(--tp-border); box-shadow: 0 4px 14px rgba(15,29,58,0.06); position: relative; overflow: hidden; }
+  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tp-cyan); }
+  .kpi.green::before { background: #2ecc71; }
+  .kpi.orange::before { background: #ff9933; }
+  .kpi.purple::before { background: #8e6bff; }
+  .kpi .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--tp-muted); }
+  .kpi .kpi-value { font-size: 30px; font-weight: 800; color: var(--tp-navy); margin: 6px 0 2px; }
+  .kpi .kpi-delta { font-size: 12px; font-weight: 600; }
+  .kpi .kpi-delta.up { color: #2ecc71; }
+  .kpi .kpi-delta.down { color: #c0392b; }
+  .heatmap-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 980px) { .heatmap-wrap { grid-template-columns: 1fr; } }
+  .heatmap-card { background: white; border-radius: 14px; padding: 18px; border: 1px solid var(--tp-border); box-shadow: 0 4px 14px rgba(15,29,58,0.06); }
+  .heatmap-card h3 { margin: 0 0 4px 0; color: var(--tp-navy); font-size: 18px; text-align: center; }
+  .heatmap-card .heatmap-date { text-align: center; font-size: 12px; color: var(--tp-accent); margin-bottom: 14px; font-weight: 600; }
+  .heatmap-grid { position: relative; width: 100%; aspect-ratio: 1 / 1; background: radial-gradient(circle at 20% 30%, rgba(180,200,220,0.25) 0 26px, transparent 27px), radial-gradient(circle at 65% 22%, rgba(180,200,220,0.25) 0 22px, transparent 23px), radial-gradient(circle at 78% 28%, rgba(180,200,220,0.25) 0 30px, transparent 31px), linear-gradient(180deg, #f7f8fa 0%, #eef1f4 100%); border-radius: 12px; overflow: hidden; }
+  .heatmap-grid .river { position: absolute; right: 4%; top: 30%; width: 6px; height: 70%; background: #93d2ed; border-radius: 8px; transform: rotate(-3deg); opacity: 0.7; }
+  .heatmap-grid .road { position: absolute; left: 14%; top: 60%; width: 80px; height: 80px; border: 2px solid #d4d8dd; border-radius: 40% 50% 50% 60%; }
+  .heatmap-dot { position: absolute; width: 28px; height: 28px; border-radius: 50%; color: white; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+  .legend { display: flex; gap: 12px; justify-content: center; margin-top: 12px; font-size: 11px; color: var(--tp-muted); flex-wrap: wrap; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+  .keyword-row { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .keyword-row label { font-size: 12px; color: var(--tp-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .keyword-row select { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--tp-border); background: white; color: var(--tp-navy); font-size: 14px; font-weight: 600; min-width: 240px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table th { text-align: left; padding: 12px 10px; color: var(--tp-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; border-bottom: 2px solid var(--tp-border); }
+  table td { padding: 12px 10px; border-bottom: 1px solid var(--tp-border); color: var(--tp-text); }
+  table tr:hover td { background: var(--tp-bg); }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge.won { background: #d6f5e0; color: #1e8a3c; }
+  .badge.pending { background: #fff4d6; color: #b07e10; }
+  .badge.lost { background: #f8d7d7; color: #9d2a1e; }
+  .badge.new { background: #d6ecff; color: #0072c6; }
+  .chart-wrap { position: relative; height: 320px; }
+  footer { text-align: center; padding: 24px; font-size: 12px; color: var(--tp-muted); }
+  .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--tp-accent); margin: 0 0 14px 0; font-weight: 700; }
+  .client-summary-pill { display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; font-size: 13px; }
+  .back-btn { background: rgba(255,255,255,0.15) !important; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo"><svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="aliSphere" cx="35%" cy="32%" r="78%"><stop offset="0%" stop-color="#9eefff"/><stop offset="45%" stop-color="#1e88e5"/><stop offset="100%" stop-color="#081a3e"/></radialGradient></defs><ellipse cx="100" cy="100" rx="93" ry="32" fill="none" stroke="#4dd2ff" stroke-width="2.6" transform="rotate(22 100 100)" opacity="0.9"/><ellipse cx="100" cy="100" rx="93" ry="32" fill="none" stroke="#1e88e5" stroke-width="2.6" transform="rotate(-22 100 100)" opacity="0.9"/><ellipse cx="100" cy="100" rx="88" ry="26" fill="none" stroke="#0072c6" stroke-width="2.2" transform="rotate(78 100 100)" opacity="0.65"/><circle cx="100" cy="100" r="62" fill="url(#aliSphere)"/><ellipse cx="86" cy="78" rx="22" ry="13" fill="rgba(255,255,255,0.22)"/><path d="M 50 124 Q 75 117 100 125 T 150 122" stroke="white" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.9"/><circle cx="14" cy="78" r="4.5" fill="#4dd2ff"/><circle cx="186" cy="122" r="4.5" fill="#4dd2ff"/><circle cx="172" cy="48" r="3" fill="#1e88e5"/><circle cx="28" cy="152" r="3" fill="#1e88e5"/><text x="100" y="112" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="33" letter-spacing="-1.5"><tspan fill="#0a1f4a">ALI</tspan><tspan fill="#4dd2ff" dx="3">360</tspan></text><text x="159" y="93" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#4dd2ff">TM</text></svg></div>
+    <h2 class="login-title">A.L.I. 360</h2>
+    <div class="login-sub">PARTNER PORTAL</div>
+    <div class="login-field"><label>Username</label><input type="text" id="loginEmail" placeholder="danny" autocomplete="username"/></div>
+    <div class="login-field"><label>Password</label><input type="password" id="loginPassword" placeholder="--------" autocomplete="current-password"/></div>
+    <div class="login-error" id="loginError" style="display:none;"></div>
+    <button class="login-btn" id="loginBtn">SIGN IN</button>
+    <div class="login-helper"><a href="#" onclick="event.preventDefault()">Forgot password?</a> &nbsp;-&nbsp; <a href="#" onclick="event.preventDefault()">Request access</a></div>
+    <div class="login-footer">Powered by Target Patients MD &mdash; HIPAA Compliant</div>
+  </div>
+</div>
+
+<!-- CLIENTS -->
+<div id="screen-clients" class="screen">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo"><svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="aliSphere" cx="35%" cy="32%" r="78%"><stop offset="0%" stop-color="#9eefff"/><stop offset="45%" stop-color="#1e88e5"/><stop offset="100%" stop-color="#081a3e"/></radialGradient></defs><ellipse cx="100" cy="100" rx="93" ry="32" fill="none" stroke="#4dd2ff" stroke-width="2.6" transform="rotate(22 100 100)" opacity="0.9"/><ellipse cx="100" cy="100" rx="93" ry="32" fill="none" stroke="#1e88e5" stroke-width="2.6" transform="rotate(-22 100 100)" opacity="0.9"/><ellipse cx="100" cy="100" rx="88" ry="26" fill="none" stroke="#0072c6" stroke-width="2.2" transform="rotate(78 100 100)" opacity="0.65"/><circle cx="100" cy="100" r="62" fill="url(#aliSphere)"/><ellipse cx="86" cy="78" rx="22" ry="13" fill="rgba(255,255,255,0.22)"/><path d="M 50 124 Q 75 117 100 125 T 150 122" stroke="white" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.9"/><circle cx="14" cy="78" r="4.5" fill="#4dd2ff"/><circle cx="186" cy="122" r="4.5" fill="#4dd2ff"/><circle cx="172" cy="48" r="3" fill="#1e88e5"/><circle cx="28" cy="152" r="3" fill="#1e88e5"/><text x="100" y="112" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="33" letter-spacing="-1.5"><tspan fill="#0a1f4a">ALI</tspan><tspan fill="#4dd2ff" dx="3">360</tspan></text><text x="159" y="93" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#4dd2ff">TM</text></svg></div>
+      <div class="brand-title"><h1>Client Directory</h1><small>A.L.I. 360 &nbsp;-&nbsp; <span id="totalClientsTopbar">325</span> ACTIVE PRACTICES</small></div>
+    </div>
+    <div class="topbar-actions">
+      <input type="text" id="searchInput" placeholder="Search practice name, specialty, city..." />
+      <div class="user-badge"><div class="user-avatar" id="userInitial">D</div><span id="userName">Danny</span></div>
+      <button id="logoutBtn">Log Out</button>
+    </div>
+  </header>
+  <div class="clients-body">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Active Clients</div><div class="stat-value" id="psTotalClients">0</div><div class="stat-foot">across 18 specialties</div></div>
+      <div class="stat-card green"><div class="stat-label">Avg DR Gain</div><div class="stat-value" id="psAvgDR">+0</div><div class="stat-foot">since signup</div></div>
+      <div class="stat-card orange"><div class="stat-label">Total Revenue Generated</div><div class="stat-value" id="psTotalRev">$0</div><div class="stat-foot">tracked from A.L.I. 360</div></div>
+      <div class="stat-card purple"><div class="stat-label">Total Leads Delivered</div><div class="stat-value" id="psTotalLeads">0</div><div class="stat-foot">qualified patient leads</div></div>
+      <div class="stat-card red"><div class="stat-label">Schema Markups Built</div><div class="stat-value" id="psSchema">0</div><div class="stat-foot">AI-generated nodes</div></div>
+    </div>
+    <div class="filter-chips" id="filterChips"></div>
+    <div class="clients-grid" id="clientsGrid"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo"><svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="aliSphere" cx="35%" cy="32%" r="78%"><stop offset="0%" stop-color="#9eefff"/><stop offset="45%" stop-color="#1e88e5"/><stop offset="100%" stop-color="#081a3e"/></radialGradient></defs><ellipse cx="100" cy="100" rx="93" ry="32" fill="none" stroke="#4dd2ff" stroke-width="2.6" transform="rotate(22 100 100)" opacity="0.9"/><ellipse cx="100" cy="100" rx="93" ry="32" fill="none" stroke="#1e88e5" stroke-width="2.6" transform="rotate(-22 100 100)" opacity="0.9"/><ellipse cx="100" cy="100" rx="88" ry="26" fill="none" stroke="#0072c6" stroke-width="2.2" transform="rotate(78 100 100)" opacity="0.65"/><circle cx="100" cy="100" r="62" fill="url(#aliSphere)"/><ellipse cx="86" cy="78" rx="22" ry="13" fill="rgba(255,255,255,0.22)"/><path d="M 50 124 Q 75 117 100 125 T 150 122" stroke="white" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.9"/><circle cx="14" cy="78" r="4.5" fill="#4dd2ff"/><circle cx="186" cy="122" r="4.5" fill="#4dd2ff"/><circle cx="172" cy="48" r="3" fill="#1e88e5"/><circle cx="28" cy="152" r="3" fill="#1e88e5"/><text x="100" y="112" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="33" letter-spacing="-1.5"><tspan fill="#0a1f4a">ALI</tspan><tspan fill="#4dd2ff" dx="3">360</tspan></text><text x="159" y="93" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#4dd2ff">TM</text></svg></div>
+      <div class="brand-title"><h1 id="dashClientName">A.L.I. 360 Dashboard</h1><small id="dashClientSpec">POWERED BY TARGET PATIENTS MD</small></div>
+    </div>
+    <div class="topbar-actions">
+      <div class="client-summary-pill" id="dashSummaryPill">DR: - --> -</div>
+      <div style="display: flex; flex-direction: column;"><label style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--tp-cyan-light);">Reporting As Of</label><input type="date" id="currentDate" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: white; padding: 6px 10px; border-radius: 8px; font-size: 13px;"/></div>
+      <button id="backBtn" class="back-btn">&larr; All Clients</button>
+    </div>
+  </header>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dr"><span class="tab-num">1</span> Domain Relevancy</button>
+    <button class="tab-btn" data-tab="heat"><span class="tab-num">2</span> Google Business Heat Maps</button>
+    <button class="tab-btn" data-tab="vis"><span class="tab-num">3</span> Search &amp; AI Visibility</button>
+    <button class="tab-btn" data-tab="leads"><span class="tab-num">4</span> Leads, Conversions &amp; Revenue</button>
+  </nav>
+  <main>
+    <section class="tab-panel active" id="tab-dr">
+      <div class="panel-header"><h2>Domain Relevancy Growth</h2><p>A.L.I. 360 builds AI-generated schema markup directly into the backend of <span class="dashClientNameInline"></span>'s website. As Domain Relevancy climbs from <strong>0-100</strong>, the practice's website, Google Business Profile, and connected social channels gain authority in tandem.</p></div>
+      <div class="card" style="margin-bottom: 18px;">
+        <div class="section-title">DR Progression</div>
+        <div class="grid grid-3" style="align-items: end;">
+          <div class="dr-stage"><div class="stage-label">Initial</div><div class="stage-date" id="drInitialDate">-</div>
+            <div class="dr-donut"><svg viewBox="0 0 120 120" width="170" height="170"><circle cx="60" cy="60" r="52" fill="none" stroke="#eef1f4" stroke-width="14"/><circle id="drDonutInitial" cx="60" cy="60" r="52" fill="none" stroke="url(#gradInit)" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 999"/><defs><linearGradient id="gradInit" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#ff9933"/><stop offset="100%" stop-color="#e8731e"/></linearGradient></defs></svg><div class="dr-value"><div class="num" id="drInitialNum">-</div><div class="lbl">DR</div></div></div>
+            <div class="stage-caption">Baseline at signup</div></div>
+          <div class="dr-stage"><div class="stage-label">Mid-Cycle (~3 Months + 6 Days)</div><div class="stage-date" id="drMidDate">-</div>
+            <div class="dr-donut"><svg viewBox="0 0 120 120" width="170" height="170"><circle cx="60" cy="60" r="52" fill="none" stroke="#eef1f4" stroke-width="14"/><circle id="drDonutMid" cx="60" cy="60" r="52" fill="none" stroke="url(#gradMid)" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 999"/><defs><linearGradient id="gradMid" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#4dd2ff"/><stop offset="100%" stop-color="#1e88e5"/></linearGradient></defs></svg><div class="dr-value"><div class="num" id="drMidNum">-</div><div class="lbl">DR</div></div></div>
+            <div class="stage-caption">A.L.I. 360 scaling schema</div></div>
+          <div class="dr-stage"><div class="stage-label">Current</div><div class="stage-date" id="drCurrentDate">-</div>
+            <div class="dr-donut"><svg viewBox="0 0 120 120" width="170" height="170"><circle cx="60" cy="60" r="52" fill="none" stroke="#eef1f4" stroke-width="14"/><circle id="drDonutCurrent" cx="60" cy="60" r="52" fill="none" stroke="url(#gradCur)" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 999"/><defs><linearGradient id="gradCur" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#2ecc71"/><stop offset="100%" stop-color="#1e6b1e"/></linearGradient></defs></svg><div class="dr-value"><div class="num" id="drCurrentNum">-</div><div class="lbl">DR</div></div></div>
+            <div class="stage-caption">Authority achieved</div></div>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card"><div class="section-title">Domain Relevancy Over Time</div><div class="chart-wrap"><canvas id="drLineChart"></canvas></div></div>
+        <div class="card"><div class="section-title">Authority Snapshot</div>
+          <div class="grid grid-2" style="gap: 12px;">
+            <div class="kpi green"><div class="kpi-label">DR Gain</div><div class="kpi-value" id="kpiDRGain">+0</div><div class="kpi-delta up" id="kpiDRGainPct">0%</div></div>
+            <div class="kpi"><div class="kpi-label">Schema Markups Built</div><div class="kpi-value" id="kpiSchema">0</div><div class="kpi-delta up">Generated by A.L.I. 360</div></div>
+            <div class="kpi orange"><div class="kpi-label">Backlinks Indexed</div><div class="kpi-value" id="kpiBacklinks">0</div><div class="kpi-delta up" id="kpiBacklinksPct">0%</div></div>
+            <div class="kpi purple"><div class="kpi-label">Referring Domains</div><div class="kpi-value" id="kpiRefDom">0</div><div class="kpi-delta up" id="kpiRefDomPct">0%</div></div>
+          </div>
+          <p style="font-size: 12px; color: var(--tp-muted); margin: 16px 0 0 0; line-height: 1.5;">As Domain Relevancy climbs, Google rewards the entire connected ecosystem -- the practice website, the Google Business Profile, and linked social profiles -- with higher placement in local searches and AI Overviews.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-heat">
+      <div class="panel-header"><h2>Google Business Profile - Local Pack Heat Maps</h2><p>Each dot is a geo-grid scan point around <span class="dashClientNameInline"></span>. The number is the practice's ranking position for the selected keyword. Green = top 3, yellow = top 5, orange/red = page 2+. Watch the map turn green after A.L.I. 360.</p></div>
+      <div class="card">
+        <div class="keyword-row"><label>Keyword</label><select id="keywordSelect"></select><div style="margin-left: auto; font-size: 12px; color: var(--tp-muted);"><span id="heatBeforeDateLabel"></span> &nbsp;-->&nbsp; <span id="heatAfterDateLabel"></span></div></div>
+        <div class="heatmap-wrap">
+          <div class="heatmap-card"><h3>Before A.L.I. 360</h3><div class="heatmap-date" id="heatBeforeDate">-</div><div class="heatmap-grid" id="heatmapBefore"><div class="river"></div><div class="road"></div></div><div class="legend"><span><i style="background:#1e6b1e"></i> #1-3</span><span><i style="background:#8a9a1e"></i> #4-5</span><span><i style="background:#f5c842"></i> #6-9</span><span><i style="background:#e8731e"></i> #10-14</span><span><i style="background:#c0392b"></i> #15+</span></div></div>
+          <div class="heatmap-card"><h3>After A.L.I. 360</h3><div class="heatmap-date" id="heatAfterDate">-</div><div class="heatmap-grid" id="heatmapAfter"><div class="river"></div><div class="road"></div></div><div class="legend"><span><i style="background:#1e6b1e"></i> #1-3</span><span><i style="background:#8a9a1e"></i> #4-5</span><span><i style="background:#f5c842"></i> #6-9</span><span><i style="background:#e8731e"></i> #10-14</span><span><i style="background:#c0392b"></i> #15+</span></div></div>
+        </div>
+        <div class="grid grid-4" style="margin-top: 22px;">
+          <div class="kpi green"><div class="kpi-label">Avg Rank - Before</div><div class="kpi-value" id="avgRankBefore">-</div><div class="kpi-delta down">Visibility limited</div></div>
+          <div class="kpi green"><div class="kpi-label">Avg Rank - After</div><div class="kpi-value" id="avgRankAfter">-</div><div class="kpi-delta up" id="avgRankImprove">improved</div></div>
+          <div class="kpi orange"><div class="kpi-label">Top-3 Grid Points</div><div class="kpi-value" id="top3Count">-</div><div class="kpi-delta up" id="top3Delta">gain</div></div>
+          <div class="kpi purple"><div class="kpi-label">3-Pack Reach</div><div class="kpi-value" id="reachPct">-</div><div class="kpi-delta up">Local Pack dominance</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-vis">
+      <div class="panel-header"><h2>Search &amp; AI Visibility Lift</h2><p>Monthly impressions per keyword on Google organic search and AI-powered search engines (ChatGPT, Perplexity, Google AI Overviews, Gemini). Before vs. after A.L.I. 360.</p></div>
+      <div class="grid grid-2">
+        <div class="card"><div class="section-title">Google Search - Impressions by Keyword</div><div class="chart-wrap"><canvas id="googleChart"></canvas></div></div>
+        <div class="card"><div class="section-title">AI Search - Citations by Keyword</div><div class="chart-wrap"><canvas id="aiChart"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top: 18px;"><div class="section-title">Keyword Performance Table</div><table><thead><tr><th>Keyword</th><th>Google (Before)</th><th>Google (After)</th><th>AI (Before)</th><th>AI (After)</th><th>Lift</th></tr></thead><tbody id="visTableBody"></tbody></table></div>
+    </section>
+
+    <section class="tab-panel" id="tab-leads">
+      <div class="panel-header"><h2>Leads, Conversions &amp; Revenue</h2><p>Direct revenue impact since A.L.I. 360 went live for <span class="dashClientNameInline"></span>. Tracked from form submissions, phone calls, and booking widgets across the connected ecosystem.</p></div>
+      <div class="grid grid-5" style="margin-bottom: 18px;">
+        <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="totalLeads">0</div><div class="kpi-delta up" id="totalLeadsDelta">since signup</div></div>
+        <div class="kpi" style="--accent: #00aeef;"><div class="kpi-label">Conversion Rate</div><div class="kpi-value" id="convRatePct">0%</div><div class="kpi-delta up" id="convRateDelta">Industry avg ~20%</div></div>
+        <div class="kpi green"><div class="kpi-label">Conversions</div><div class="kpi-value" id="totalConv">0</div><div class="kpi-delta up" id="convRate">leads becoming patients</div></div>
+        <div class="kpi orange"><div class="kpi-label">Revenue Generated</div><div class="kpi-value" id="totalRev">$0</div><div class="kpi-delta up" id="revDelta">tracked from A.L.I. 360</div></div>
+        <div class="kpi purple"><div class="kpi-label">Cost / Acquired Patient</div><div class="kpi-value" id="cac">$0</div><div class="kpi-delta up">Down vs. paid ads</div></div>
+      </div>
+      <div class="grid grid-2" style="margin-bottom: 18px;">
+        <div class="card"><div class="section-title">Monthly Leads &amp; Conversions</div><div class="chart-wrap"><canvas id="leadsChart"></canvas></div></div>
+        <div class="card"><div class="section-title">Revenue Generated by Month</div><div class="chart-wrap"><canvas id="revChart"></canvas></div></div>
+      </div>
+      <div class="card"><div class="section-title">Recent Leads</div><table><thead><tr><th>Date</th><th>Patient (Anon)</th><th>Service Inquired</th><th>Source</th><th>Status</th><th>Estimated Value</th></tr></thead><tbody id="leadsTableBody"></tbody></table></div>
+    </section>
+  </main>
+  <footer>(c) Target Patients MD &mdash; A.L.I. 360 is a proprietary backend schema-building AI agent for medical practices. Patient names anonymized for HIPAA compliance.</footer>
+</div>
+
+<script>
+/* A.L.I. 360 Dashboard - Login then Clients then Per-Client Dashboard */
+
+function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
+function pick(rng,arr){return arr[Math.floor(rng()*arr.length)];}
+function ri(rng,lo,hi){return Math.floor(rng()*(hi-lo+1))+lo;}
+
+const SPECIALTIES = [
+  { id:'medspa',     label:'Medical Spa',           count:33 },
+  { id:'plastic',    label:'Plastic Surgery',       count:29 },
+  { id:'dental',     label:'Dental',                count:31 },
+  { id:'derm',       label:'Dermatology',           count:22 },
+  { id:'primary',    label:'Primary Care',          count:22 },
+  { id:'cardio',     label:'Cardiology',            count:21 },
+  { id:'ortho',      label:'Orthopedics',           count:23 },
+  { id:'ophth',      label:'Ophthalmology',         count:18 },
+  { id:'bariatric',  label:'Bariatrics',            count:16 },
+  { id:'mental',     label:'Mental Health',         count:18 },
+  { id:'urgent',     label:'Urgent Care',           count:16 },
+  { id:'iv',         label:'IV Therapy',            count:14 },
+  { id:'weightloss', label:'Medical Weight Loss',   count:14 },
+  { id:'regen',      label:'Regenerative Medicine', count:13 },
+  { id:'botox',      label:'Botox & CoolSculpting', count:12 },
+  { id:'mens',       label:'Mens Health / ED',      count:10 },
+  { id:'hair',       label:'Hair Restoration',      count:10 },
+  { id:'pain',       label:'Pain Management',       count:9  }
+];
+
+const FIRST = ['Adams','Bennett','Carter','Davis','Ellis','Foster','Gibson','Harper','Iverson','Jensen','Klein','Larson','Mitchell','Nguyen','OBrien','Patel','Quincy','Reed','Sullivan','Turner','Underwood','Vargas','Walsh','Xavier','Young','Zhang','Anderson','Brooks','Chen','Dawson','Edwards','Fischer','Greene','Hayes','Ingram','Jacobs','Kim','Lopez','Morales','Nash','Owens','Powell','Quinn','Reyes','Schultz','Thompson','Vaughn','Walker','Park','Reynolds'];
+const ADJ = ['Premier','Advanced','Elite','Coastal','Lakeside','Riverside','Sunrise','Sunset','Valley','Mountain','Bayview','Parkside','Westside','Eastside','Highland','Pioneer','Heritage','Summit','Cornerstone','Beacon','Trinity','Liberty','Pacific','Atlantic','Southern','Northern','Pinnacle','Vanguard','Crown','Capital'];
+const CITY = ['Austin','Boston','Charlotte','Dallas','Denver','Detroit','Houston','Indianapolis','Jacksonville','Las Vegas','Long Beach','Louisville','Memphis','Miami','Milwaukee','Minneapolis','Nashville','New Orleans','Oakland','Orlando','Philadelphia','Phoenix','Pittsburgh','Portland','Raleigh','Sacramento','San Antonio','San Diego','Seattle','St Louis','Tampa','Tucson','Tulsa','Atlanta','Baltimore','Buffalo','Cincinnati','Cleveland','Columbus','Fort Worth','Kansas City','Mesa','Omaha','Wichita','Albany','Boise','Madison','Reno','Salem','Spokane'];
+
+const NAME_TEMPLATES = {
+  medspa:['{Adj} Med Spa','{City} Aesthetics & Wellness','{Adj} Aesthetics','Luxe Medical Spa of {City}','{First} Medical Spa','Pure Glow Med Spa','Radiance Medical Spa of {City}','Bella Vita Aesthetics','{Adj} Skin & Body','Serenity Med Spa'],
+  plastic:['Dr. {First} Plastic Surgery','{City} Plastic Surgery Center','{Adj} Plastic Surgery','{First} & Associates Plastic Surgery','{City} Cosmetic Surgery Institute','{Adj} Aesthetic Surgery'],
+  dental:['{Adj} Smile Dentistry','{City} Dental Care','{First} Family Dental','{Adj} Family Dentistry','{City} Cosmetic Dentistry','{First} DDS','{Adj} Dental Group','{City} Implant Dentistry'],
+  derm:['{Adj} Dermatology','{City} Skin Institute','{First} Dermatology Associates','Dermatology of {City}','{Adj} Skin Care Center'],
+  primary:['{Adj} Family Medicine','{City} Primary Care','{First} Family Practice','{Adj} Internal Medicine','{City} Health Group'],
+  cardio:['{Adj} Cardiology','{City} Heart Center','{First} Cardiology Associates','{Adj} Cardiovascular Institute','Heart of {City}'],
+  ortho:['{Adj} Orthopedics','{City} Orthopedic Specialists','{First} Sports Medicine','{Adj} Bone & Joint','{City} Orthopedic Group'],
+  ophth:['{Adj} Eye Care','{City} Vision Institute','{First} LASIK Center','{Adj} Ophthalmology','{City} Eye Associates'],
+  bariatric:['{Adj} Bariatrics','{City} Weight Loss Surgery','{First} Bariatric Center','{Adj} Surgical Weight Loss','{City} Bariatric Institute'],
+  mental:['{Adj} Mental Health','{City} Psychiatric Associates','{First} Behavioral Health','{Adj} Counseling Center','{City} Mind Wellness'],
+  urgent:['{Adj} Urgent Care','{City} Urgent Care','Express Care of {City}','{Adj} Walk-In Clinic','{City} Urgent Medical'],
+  iv:['{Adj} IV Hydration','{City} IV Therapy Lounge','{First} Drip Bar','{Adj} Hydration & Wellness','Hydrate {City}'],
+  weightloss:['{Adj} Weight Loss Clinic','{City} GLP-1 Center','{First} Medical Weight Loss','{Adj} Slim Clinic','{City} Weight Management'],
+  regen:['{Adj} Regenerative Medicine','{City} Stem Cell Institute','{First} Regenerative Health','{Adj} Cell Therapy','{City} Joint Restoration'],
+  botox:['{Adj} Botox & CoolSculpting Center','{City} Injectable Studio','{First} Aesthetics Bar','{Adj} Botox Lounge','Tox & Body of {City}'],
+  mens:['{Adj} Mens Health','{City} Mens Clinic','{First} Mens Health','{Adj} ED Clinic','Vitality Mens Health'],
+  hair:['{Adj} Hair Restoration','{City} Hair Clinic','{First} Hair Restoration Center','{Adj} Hair Transplant','{City} Hair Institute'],
+  pain:['{Adj} Pain Management','{City} Pain Specialists','{First} Pain Clinic','{Adj} Interventional Pain','{City} Spine & Pain']
+};
+
+const KEYWORDS_POOL = {
+  medspa:['botox near me','medspa near me','laser hair removal','coolsculpting','lip filler'],
+  plastic:['plastic surgeon near me','rhinoplasty','breast augmentation','tummy tuck','liposuction cost'],
+  dental:['dentist near me','dental implants','cosmetic dentist','invisalign provider','emergency dentist'],
+  derm:['dermatologist near me','acne treatment','mohs surgery','skin cancer screening','cosmetic dermatology'],
+  primary:['primary care doctor near me','family medicine clinic','annual physical exam','family doctor accepting new patients','wellness visit'],
+  cardio:['cardiologist near me','heart specialist','echocardiogram','stress test','atrial fibrillation'],
+  ortho:['orthopedic surgeon near me','knee replacement','hip replacement','sports medicine doctor','acl reconstruction'],
+  ophth:['lasik near me','cataract surgery','ophthalmologist near me','glaucoma specialist','dry eye treatment'],
+  bariatric:['gastric sleeve surgery','gastric bypass','weight loss surgery','bariatric surgeon','lap band surgery'],
+  mental:['psychiatrist near me','therapist near me','depression treatment','anxiety treatment','tms therapy'],
+  urgent:['urgent care near me','walk in clinic','covid testing','x ray near me','sports physical'],
+  iv:['iv therapy near me','iv hydration','myers cocktail','nad iv therapy','immunity drip'],
+  weightloss:['glp 1 weight loss','semaglutide near me','tirzepatide clinic','medical weight loss clinic','wegovy provider'],
+  regen:['stem cell therapy','prp injection','regenerative medicine','knee stem cell','exosome therapy'],
+  botox:['botox near me','coolsculpting near me','dysport injector','dermal filler','lip injections'],
+  mens:['low t clinic','testosterone replacement','ed clinic near me','trt doctor','shockwave therapy ed'],
+  hair:['hair transplant near me','fue hair transplant','hair restoration clinic','prp hair treatment','womens hair loss'],
+  pain:['pain management near me','epidural injection','sciatica treatment','nerve block','chronic pain doctor']
+};
+
+const SERVICES = {
+  medspa:['Botox Package','Dermal Fillers','CoolSculpting','Laser Hair Removal','Microneedling','HydraFacial','Lip Filler','Chemical Peel'],
+  plastic:['Rhinoplasty','Breast Augmentation','Tummy Tuck','Liposuction','Mommy Makeover','Eyelid Surgery','Facelift','BBL'],
+  dental:['Dental Implant','Invisalign','Cosmetic Veneers','Emergency Visit','Whitening','Crown','Root Canal','Cleaning'],
+  derm:['Acne Consultation','Mohs Surgery','Skin Cancer Screening','Cosmetic Botox','Laser Treatment','Mole Removal','Psoriasis Therapy','Skin Tag Removal'],
+  primary:['Annual Physical','Family Medicine Consult','Wellness Visit','New Patient Intake','Sick Visit','Telehealth','Medicare Visit','Lab Workup'],
+  cardio:['Cardiology Consult','Echocardiogram','Stress Test','Holter Monitor','AFib Evaluation','Cardiac Cath','Pacemaker Eval','TEE'],
+  ortho:['Knee Consultation','Hip Consultation','ACL Evaluation','Rotator Cuff Repair','Sports Injury','Spine Consult','Joint Injection','Trigger Point'],
+  ophth:['LASIK Consultation','Cataract Surgery','Eye Exam','Dry Eye Treatment','Glaucoma Workup','Retina Consult','Contact Fitting','Refractive Eval'],
+  bariatric:['Gastric Sleeve Consult','Gastric Bypass','Lap Band','Bariatric Revision','Weight Loss Workup','Seminar Sign-Up','Pre-Op Evaluation','Post-Op Follow-Up'],
+  mental:['Initial Psychiatric Eval','Therapy Session','TMS Course','Ketamine Infusion','ADHD Evaluation','Med Management','Couples Counseling','Telehealth Visit'],
+  urgent:['Sick Visit','Sports Physical','COVID Test','Flu Test','X-Ray','Laceration Repair','Minor Burn','UTI Treatment'],
+  iv:['Myers Cocktail','NAD+ Drip','Immunity Drip','Hangover IV','Beauty Drip','B12 Shot','Glutathione Push','Athletic Recovery'],
+  weightloss:['Semaglutide Program','Tirzepatide Program','GLP-1 Consult','Phentermine Rx','Body Composition','Nutrition Counseling','Hormone Workup','Maintenance Plan'],
+  regen:['PRP Joint Injection','Stem Cell Knee','PRP Hair','PRP Facial','Exosome Therapy','Cell Therapy Consult','Regenerative Eval','Follow-Up'],
+  botox:['Botox Touch-Up','Dysport Treatment','Lip Filler','Jawline Tox','CoolSculpting Cycle','Membership Sign-Up','Filler Refresh','Brow Lift'],
+  mens:['TRT Consultation','ED Evaluation','Shockwave Therapy','P-Shot','Bloodwork Panel','Hormone Optimization','Peyronies Eval','Follow-Up'],
+  hair:['FUE Transplant','PRP Hair','SMP Consult','Hair Line Design','Womens Hair Loss','Beard Transplant','Eyebrow Restore','Maintenance Plan'],
+  pain:['Epidural Injection','Facet Joint','Spinal Cord Stim Eval','Radiofrequency Ablation','Migraine Consult','Sciatica Eval','Nerve Block','Pain Clinic Intake']
+};
+
+// Avg revenue per acquired patient (initial procedure / first-90-day LTV) based on real market rates:
+// medspa: avg botox/filler/laser package; plastic: avg surgery ~$11K (rhino/breast aug/tummy);
+// dental: implant + cosmetic mix; derm: cosmetic + medical mix; primary: new-pt eval + workup;
+// cardio: consult + echo/stress; ortho: consult + injections (small % surgery); ophth: LASIK/cataract mix;
+// bariatric: gastric sleeve/bypass avg ~$18K; mental: initial eval + first months therapy;
+// urgent: walk-in visit + x-ray; iv: first drip + package; weightloss: 90-day GLP-1 protocol;
+// regen: PRP + stem cell mix; botox: tox + coolsculpting session; mens: TRT 90-day + ED procedures;
+// hair: FUE transplant or PRP package; pain: epidural/RFA per patient
+const AVG_LEAD_VALUE = {medspa:950,plastic:11000,dental:3400,derm:650,primary:520,cardio:1600,ortho:2400,ophth:4200,bariatric:18000,mental:520,urgent:260,iv:380,weightloss:2200,regen:4500,botox:880,mens:1900,hair:6800,pain:1750};
+
+// Realistic max new-patient LEADS per month per specialty (from one local-practice digital channel)
+const MAX_MONTHLY_LEADS = {medspa:57,plastic:56,dental:57,derm:56,primary:58,cardio:56,ortho:56,ophth:56,bariatric:56,mental:58,urgent:60,iv:57,weightloss:57,regen:56,botox:57,mens:56,hair:56,pain:57};
+// Lead → conversion rate range per specialty (digital marketing inbound)
+const CONV_RATE = {medspa:[0.36,0.40],plastic:[0.35,0.39],dental:[0.36,0.40],derm:[0.37,0.40],primary:[0.37,0.40],cardio:[0.36,0.40],ortho:[0.35,0.39],ophth:[0.35,0.39],bariatric:[0.35,0.38],mental:[0.37,0.40],urgent:[0.37,0.40],iv:[0.36,0.40],weightloss:[0.36,0.40],regen:[0.35,0.39],botox:[0.36,0.40],mens:[0.35,0.39],hair:[0.35,0.39],pain:[0.36,0.40]};
+
+const CLIENTS = [];
+let _clientIndex = 0;
+SPECIALTIES.forEach((spec, sIdx) => {
+  for (let n = 0; n < spec.count; n++) {
+    const seed = (sIdx + 1) * 10007 + n * 17;
+    const rng = mulberry32(seed);
+    const tmpl = pick(rng, NAME_TEMPLATES[spec.id]);
+    const first = pick(rng, FIRST);
+    const adj = pick(rng, ADJ);
+    const city = pick(rng, CITY);
+    const name = tmpl.replace('{First}', first).replace('{Adj}', adj).replace('{City}', city);
+    const drInit = ri(rng, 2, 12);
+    const drCurr = ri(rng, 45, 78);
+    const drMid = Math.round(drInit + (drCurr - drInit) * (0.45 + rng() * 0.1));
+    const schema = ri(rng, 950, 1700);
+    const backlinksBefore = ri(rng, 12, 35);
+    const backlinksAfter = backlinksBefore * ri(rng, 8, 14);
+    const refDomBefore = ri(rng, 5, 16);
+    const refDomAfter = refDomBefore * ri(rng, 4, 8);
+    const pool = KEYWORDS_POOL[spec.id];
+    const keywords = pool.map(kw => {
+      const gBefore = ri(rng, 60, 350);
+      const gAfter = gBefore * ri(rng, 15, 30);
+      const aBefore = ri(rng, 0, 4);
+      const aAfter = ri(rng, 18, 75);
+      return { kw, gBefore, gAfter, aBefore, aAfter };
+    });
+    // 6 bi-weekly buckets across ~3 months. Per-bucket leads = half of monthly cap × growth curve × jitter.
+    const monthly = { leads: [], conversions: [], revenue: [] };
+    const avgVal = AVG_LEAD_VALUE[spec.id];
+    const maxBiweekly = MAX_MONTHLY_LEADS[spec.id] / 2;
+    const convRange = CONV_RATE[spec.id];
+    const performanceMult = 0.95 + rng() * 0.15;
+    // STEP 1: Generate per-bucket leads (with growth + jitter)
+    const leadsArr = [];
+    for (let m = 0; m < 6; m++) {
+      const t = m / 5;
+      const growth = 0.25 + Math.pow(t, 1.25) * 0.78;
+      const jitter = 0.93 + rng() * 0.14;
+      leadsArr.push(Math.max(1, Math.round(maxBiweekly * growth * jitter * performanceMult)));
+    }
+    const totalLeads = leadsArr.reduce((a,b)=>a+b, 0);
+    // STEP 2: Pick ONE conversion rate for this client (unique within specialty range, always in 9-15%)
+    const targetRate = convRange[0] + rng() * (convRange[1] - convRange[0]);
+    let targetConv = Math.max(1, Math.round(totalLeads * targetRate));
+    // Clamp so the effective rate stays inside [35%, 40%] even after integer rounding
+    const minConv = Math.ceil(totalLeads * 0.35);
+    const maxConv = Math.floor(totalLeads * 0.40);
+    if (targetConv < minConv) targetConv = minConv;
+    if (targetConv > maxConv) targetConv = maxConv;
+    targetConv = Math.max(1, targetConv);
+    // STEP 3: Distribute total conversions across the 6 buckets proportional to leads
+    const convArr = [];
+    let sumConv = 0;
+    for (let m = 0; m < 5; m++) {
+      const share = Math.round(targetConv * leadsArr[m] / totalLeads);
+      convArr.push(share);
+      sumConv += share;
+    }
+    convArr.push(Math.max(0, targetConv - sumConv));
+    // STEP 4: Revenue per bucket = conversions × avg ticket × ticket jitter
+    const ticketJitter = 0.82 + rng() * 0.36;
+    const avgTicket = Math.round(avgVal * ticketJitter);
+    const revArr = convArr.map(c => c * avgTicket);
+    monthly.leads = leadsArr;
+    monthly.conversions = convArr;
+    monthly.revenue = revArr;
+    const svcPool = SERVICES[spec.id];
+    const srcs = ['Google Search','GBP Map','AI Search','GBP Phone','Direct'];
+    const statuses = ['won','won','won','pending','new'];
+    const leadsTable = [];
+    for (let l = 0; l < 5; l++) {
+      const offset = -1 - l * (2 + ri(rng, 0, 2));
+      leadsTable.push({
+        offsetDays: offset,
+        patient: 'Patient #' + ri(rng, 1000, 9999),
+        svc: pick(rng, svcPool),
+        src: pick(rng, srcs),
+        status: statuses[l],
+        value: Math.round(avgVal * (0.6 + rng() * 0.9))
+      });
+    }
+    CLIENTS.push({
+      id: 'C' + String(_clientIndex + 1).padStart(3, '0'),
+      idx: _clientIndex,
+      name, specialty: spec.id, specialtyLabel: spec.label,
+      dr: { initial: drInit, mid: drMid, current: drCurr },
+      metrics: { schema, backlinksBefore, backlinksAfter, refDomBefore, refDomAfter },
+      keywords, monthly, leadsTable
+    });
+    _clientIndex++;
+  }
+});
+
+// Feature a named showcase client: R3 Stem Cells (Regenerative Medicine)
+(function featureR3StemCells() {
+  // Find the LAST regen client (the newest added one) and rebrand as R3 Stem Cells
+  let target = null;
+  for (let i = CLIENTS.length - 1; i >= 0; i--) {
+    if (CLIENTS[i].specialty === 'regen') { target = CLIENTS[i]; break; }
+  }
+  if (!target) return;
+  target.name = 'R3 Stem Cells';
+  // Showcase metrics: dramatic DR jump + strong revenue
+  target.dr = { initial: 3, mid: 41, current: 74 };
+  target.metrics = { schema: 1684, backlinksBefore: 18, backlinksAfter: 247, refDomBefore: 9, refDomAfter: 68 };
+  target.keywords = [
+    { kw: 'stem cell therapy',        gBefore: 145, gAfter: 4820, aBefore: 1, aAfter: 62 },
+    { kw: 'regenerative medicine',    gBefore: 110, gAfter: 3940, aBefore: 1, aAfter: 48 },
+    { kw: 'knee stem cell injection', gBefore:  85, gAfter: 3210, aBefore: 0, aAfter: 41 },
+    { kw: 'exosome therapy',          gBefore:  70, gAfter: 2780, aBefore: 0, aAfter: 36 },
+    { kw: 'prp injection near me',    gBefore: 120, gAfter: 3520, aBefore: 1, aAfter: 44 }
+  ];
+  // R3 Stem Cells - realistic 3-month showcase. ~38 leads/month avg, 113 total.
+  // 43 conversions (~38.1%), ~$215K revenue (PRP + stem cell protocols ~$5K avg ticket)
+  target.monthly = {
+    leads:       [   14,   17,   19,   20,   21,   22 ],   // total 113 (~38/month avg)
+    conversions: [    5,    6,    7,    8,    8,    9 ],   // total 43 (~38.1%)
+    revenue:     [25000, 30000, 35000, 40000, 40000, 45000]  // ~$215K total, ~$5K avg ticket
+  };
+  target.leadsTable = [
+    { offsetDays:  -1, patient: 'Patient #4188', svc: 'Stem Cell Knee Injection',  src: 'Google Search', status: 'won',     value: 5800 },
+    { offsetDays:  -3, patient: 'Patient #4172', svc: 'PRP Joint Injection',       src: 'AI Search',     status: 'won',     value: 1800 },
+    { offsetDays:  -6, patient: 'Patient #4158', svc: 'Exosome Therapy Consult',   src: 'GBP Map',       status: 'pending', value: 6500 },
+    { offsetDays:  -9, patient: 'Patient #4141', svc: 'Stem Cell Shoulder',        src: 'Google Search', status: 'won',     value: 5400 },
+    { offsetDays: -13, patient: 'Patient #4127', svc: 'Regenerative Eval',         src: 'GBP Phone',     status: 'new',     value: 1200 }
+  ];
+})();
+
+// Ensure every name is unique by appending a city if a duplicate exists
+(function deduplicateNames() {
+  const seen = {};
+  CLIENTS.forEach(c => {
+    let name = c.name;
+    if (seen[name]) {
+      const cityIdx = (c.idx * 7 + 3) % CITY.length;
+      let suffix = ' - ' + CITY[cityIdx];
+      let candidate = name + suffix;
+      let bump = 0;
+      while (seen[candidate]) {
+        bump++;
+        candidate = name + ' - ' + CITY[(cityIdx + bump) % CITY.length];
+      }
+      c.name = candidate;
+      seen[candidate] = true;
+    } else {
+      seen[name] = true;
+    }
+  });
+})();
+
+console.log('Generated', CLIENTS.length, 'clients');
+
+function buildHeatmap(seed, after) {
+  const rng = mulberry32(seed);
+  const grid = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const rand = rng();
+      let val;
+      if (after) {
+        if (rand < 0.5) val = 1;
+        else if (rand < 0.78) val = 2;
+        else if (rand < 0.93) val = 3;
+        else if (rand < 0.97) val = 4 + Math.floor(rand * 2);
+        else val = 5 + Math.floor(rand * 3);
+      } else {
+        if (rand < 0.3) val = 5;
+        else if (rand < 0.55) val = 6;
+        else if (rand < 0.72) val = 7;
+        else if (rand < 0.85) val = 8 + Math.floor(rand * 3);
+        else if (rand < 0.95) val = 13 + Math.floor(rand * 4);
+        else val = 15 + Math.floor(rand * 8);
+      }
+      grid.push(val);
+    }
+  }
+  return grid;
+}
+function rankColor(n) {
+  if (n <= 3) return '#1e6b1e';
+  if (n <= 5) return '#8a9a1e';
+  if (n <= 9) return '#f5c842';
+  if (n <= 14) return '#e8731e';
+  return '#c0392b';
+}
+
+function fmt(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function subPeriod(d, totalDays) { return addDays(d, -totalDays); }
+const TOTAL_PERIOD_DAYS = 96;
+const MID_PERIOD_DAYS = 48;
+
+let currentClient = null;
+let currentKeywordIndex = 0;
+let activeSpecialtyFilter = 'all';
+let searchTerm = '';
+let charts = {};
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// Authorized users (client-side gate). Note: anyone with developer tools can see these.
+// For real security, use Netlify Identity or Cloudflare Access on top of this.
+const AUTHORIZED = { 'danny': 'ali360' };
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const rawUser = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  // Accept either "danny" or any email starting with "danny@"
+  const username = rawUser.includes('@') ? rawUser.split('@')[0] : rawUser;
+  const errEl = document.getElementById('loginError');
+  if (AUTHORIZED[username] && AUTHORIZED[username] === password) {
+    errEl.style.display = 'none';
+    const display = username.charAt(0).toUpperCase() + username.slice(1);
+    document.getElementById('userName').textContent = display;
+    document.getElementById('userInitial').textContent = display.charAt(0);
+    renderClientsScreen();
+    showScreen('clients');
+  } else {
+    errEl.style.display = 'block';
+    errEl.textContent = (!rawUser || !password) ? 'Enter your username and password.' : 'Invalid username or password.';
+    // Subtle shake
+    const card = document.querySelector('.login-card');
+    card.style.animation = 'none';
+    card.offsetHeight; // reflow
+    card.style.animation = 'shake 0.4s ease';
+  }
+});
+['loginEmail','loginPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+});
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  showScreen('login');
+});
+document.getElementById('backBtn').addEventListener('click', () => {
+  renderClientsScreen();
+  showScreen('clients');
+});
+
+function renderClientsScreen() {
+  let totalDRGain = 0, totalRev = 0, totalLeads = 0, totalSchema = 0;
+  CLIENTS.forEach(c => {
+    totalDRGain += (c.dr.current - c.dr.initial);
+    totalRev += c.monthly.revenue.reduce((a,b)=>a+b, 0);
+    totalLeads += c.monthly.leads.reduce((a,b)=>a+b, 0);
+    totalSchema += c.metrics.schema;
+  });
+  const avgDR = (totalDRGain / CLIENTS.length).toFixed(1);
+  document.getElementById('psTotalClients').textContent = CLIENTS.length;
+  document.getElementById('totalClientsTopbar').textContent = CLIENTS.length;
+  document.getElementById('psAvgDR').textContent = '+' + avgDR;
+  document.getElementById('psTotalRev').textContent = '$' + (totalRev/1000000).toFixed(1) + 'M';
+  document.getElementById('psTotalLeads').textContent = totalLeads.toLocaleString();
+  document.getElementById('psSchema').textContent = totalSchema.toLocaleString();
+
+  const chipsEl = document.getElementById('filterChips');
+  const counts = { all: CLIENTS.length };
+  SPECIALTIES.forEach(s => counts[s.id] = CLIENTS.filter(c => c.specialty === s.id).length);
+  let chipsHtml = '<button class="chip ' + (activeSpecialtyFilter==='all' ? 'active' : '') + '" data-spec="all">All Specialties<span class="count">' + counts.all + '</span></button>';
+  SPECIALTIES.forEach(s => {
+    chipsHtml += '<button class="chip ' + (activeSpecialtyFilter===s.id ? 'active' : '') + '" data-spec="' + s.id + '">' + s.label + '<span class="count">' + counts[s.id] + '</span></button>';
+  });
+  chipsEl.innerHTML = chipsHtml;
+  chipsEl.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeSpecialtyFilter = btn.dataset.spec;
+      renderClientsScreen();
+    });
+  });
+
+  const grid = document.getElementById('clientsGrid');
+  const term = searchTerm.trim().toLowerCase();
+  const filtered = CLIENTS.filter(c => {
+    if (activeSpecialtyFilter !== 'all' && c.specialty !== activeSpecialtyFilter) return false;
+    if (term && !(c.name.toLowerCase().includes(term) || c.specialtyLabel.toLowerCase().includes(term) || c.id.toLowerCase().includes(term))) return false;
+    return true;
+  });
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="no-results"><h3>No clients match those filters</h3><p>Try clearing the search or selecting All Specialties.</p></div>';
+    return;
+  }
+  let html = '';
+  filtered.forEach(c => {
+    const tRev = c.monthly.revenue.reduce((a,b)=>a+b, 0);
+    const tLeads = c.monthly.leads.reduce((a,b)=>a+b, 0);
+    html += '<div class="client-card" data-client="' + c.id + '">' +
+      '<div class="client-header"><div><div class="client-name">' + c.name + '</div><div class="client-id">' + c.id + '</div><div class="spec-badge">' + c.specialtyLabel + '</div></div></div>' +
+      '<div class="client-dr-row"><div class="dr-mini init"><div class="dr-num">' + c.dr.initial + '</div><div class="dr-lbl">INITIAL DR</div></div><div class="dr-arrow-small">&rarr;</div><div class="dr-mini curr"><div class="dr-num">' + c.dr.current + '</div><div class="dr-lbl">CURRENT DR</div></div></div>' +
+      '<div class="client-metrics"><div class="cm-cell"><div class="cm-lbl">Leads</div><div class="cm-val">' + tLeads.toLocaleString() + '</div></div><div class="cm-cell"><div class="cm-lbl">Revenue</div><div class="cm-val green">$' + (tRev/1000).toFixed(0) + 'K</div></div></div>' +
+      '<div class="client-cta">VIEW DASHBOARD &rarr;</div></div>';
+  });
+  grid.innerHTML = html;
+  grid.querySelectorAll('.client-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const c = CLIENTS.find(x => x.id === card.dataset.client);
+      if (c) openDashboard(c);
+    });
+  });
+}
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  renderClientsScreen();
+});
+
+function openDashboard(c) {
+  currentClient = c;
+  currentKeywordIndex = 0;
+  if (!document.getElementById('currentDate').value) {
+    document.getElementById('currentDate').value = new Date().toISOString().slice(0,10);
+  }
+  renderAllDashboard();
+  showScreen('dashboard');
+}
+function getCurrentDate() {
+  const v = document.getElementById('currentDate').value;
+  return v ? new Date(v + 'T12:00:00') : new Date();
+}
+function renderAllDashboard() {
+  const c = currentClient;
+  if (!c) return;
+  const curD = getCurrentDate();
+  const midD = subPeriod(curD, MID_PERIOD_DAYS);
+  const iniD = subPeriod(curD, TOTAL_PERIOD_DAYS);
+  document.getElementById('dashClientName').textContent = c.name;
+  document.getElementById('dashClientSpec').textContent = c.specialtyLabel.toUpperCase() + ' - ' + c.id;
+  document.querySelectorAll('.dashClientNameInline').forEach(el => el.textContent = c.name);
+  document.getElementById('dashSummaryPill').textContent = 'DR: ' + c.dr.initial + ' → ' + c.dr.current + '  (+' + (c.dr.current - c.dr.initial) + ')';
+  renderDR(c, iniD, midD, curD);
+  renderKeywords(c);
+  renderHeatmaps(c, iniD, curD);
+  renderVisibility(c);
+  renderLeads(c, iniD, curD);
+}
+function setDonut(elId, val) {
+  const C = 2 * Math.PI * 52;
+  const pct = Math.max(0, Math.min(100, val)) / 100;
+  const dash = C * pct;
+  const el = document.getElementById(elId);
+  el.setAttribute('stroke-dasharray', dash + ' ' + (C - dash));
+  el.setAttribute('stroke-dashoffset', '0');
+}
+function renderDR(c, iniD, midD, curD) {
+  document.getElementById('drInitialDate').textContent = fmt(iniD);
+  document.getElementById('drMidDate').textContent = fmt(midD);
+  document.getElementById('drCurrentDate').textContent = fmt(curD);
+  document.getElementById('drInitialNum').textContent = c.dr.initial;
+  document.getElementById('drMidNum').textContent = c.dr.mid;
+  document.getElementById('drCurrentNum').textContent = c.dr.current;
+  setDonut('drDonutInitial', c.dr.initial);
+  setDonut('drDonutMid', c.dr.mid);
+  setDonut('drDonutCurrent', c.dr.current);
+  const gain = c.dr.current - c.dr.initial;
+  const gainPct = c.dr.initial > 0 ? Math.round((gain / c.dr.initial) * 100) : gain * 100;
+  document.getElementById('kpiDRGain').textContent = '+' + gain;
+  document.getElementById('kpiDRGainPct').textContent = '▲ ' + gainPct.toLocaleString() + '% over baseline';
+  document.getElementById('kpiSchema').textContent = c.metrics.schema.toLocaleString();
+  document.getElementById('kpiBacklinks').textContent = c.metrics.backlinksAfter.toLocaleString();
+  const blPct = Math.round(((c.metrics.backlinksAfter - c.metrics.backlinksBefore) / c.metrics.backlinksBefore) * 100);
+  document.getElementById('kpiBacklinksPct').textContent = '▲ ' + blPct + '% (from ' + c.metrics.backlinksBefore + ')';
+  document.getElementById('kpiRefDom').textContent = c.metrics.refDomAfter;
+  const rdPct = Math.round(((c.metrics.refDomAfter - c.metrics.refDomBefore) / c.metrics.refDomBefore) * 100);
+  document.getElementById('kpiRefDomPct').textContent = '▲ ' + rdPct + '% (from ' + c.metrics.refDomBefore + ')';
+
+  if (charts.drLine) charts.drLine.destroy();
+  const ctx = document.getElementById('drLineChart').getContext('2d');
+  const labels = [], data = [];
+  for (let i = 0; i <= 6; i++) {
+    const day = Math.round((TOTAL_PERIOD_DAYS / 6) * i);
+    const d = addDays(iniD, day);
+    labels.push(fmt(d));
+    const t = i / 6;
+    const eased = 1 - Math.pow(1 - t, 3);
+    data.push(Math.round(c.dr.initial + (c.dr.current - c.dr.initial) * eased));
+  }
+  const grad = ctx.createLinearGradient(0, 0, 0, 300);
+  grad.addColorStop(0, 'rgba(0,174,239,0.45)');
+  grad.addColorStop(1, 'rgba(0,174,239,0.02)');
+  charts.drLine = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'DR', data, borderColor: '#1e88e5', backgroundColor: grad, borderWidth: 3, tension: 0.35, fill: true, pointBackgroundColor: '#1e88e5', pointRadius: 5, pointHoverRadius: 7 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } } } }
+  });
+}
+const keywordSelect = document.getElementById('keywordSelect');
+keywordSelect.addEventListener('change', e => {
+  currentKeywordIndex = parseInt(e.target.value, 10);
+  renderHeatmaps(currentClient, subPeriod(getCurrentDate(), TOTAL_PERIOD_DAYS), getCurrentDate());
+});
+function renderKeywords(c) {
+  keywordSelect.innerHTML = '';
+  c.keywords.forEach((k, i) => {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = k.kw;
+    keywordSelect.appendChild(opt);
+  });
+  currentKeywordIndex = 0;
+  keywordSelect.value = 0;
+}
+function renderHeatmaps(c, beforeD, afterD) {
+  document.getElementById('heatBeforeDate').textContent = fmt(beforeD);
+  document.getElementById('heatAfterDate').textContent = fmt(afterD);
+  document.getElementById('heatBeforeDateLabel').textContent = 'Before - ' + fmt(beforeD);
+  document.getElementById('heatAfterDateLabel').textContent = 'After - ' + fmt(afterD);
+  const seed = c.idx * 91 + currentKeywordIndex * 13 + 1;
+  const beforeGrid = buildHeatmap(seed, false);
+  const afterGrid = buildHeatmap(seed + 7, true);
+  drawHeatmap('heatmapBefore', beforeGrid);
+  drawHeatmap('heatmapAfter', afterGrid);
+  const avgB = beforeGrid.reduce((a, b) => a + b, 0) / beforeGrid.length;
+  const avgA = afterGrid.reduce((a, b) => a + b, 0) / afterGrid.length;
+  document.getElementById('avgRankBefore').textContent = '#' + avgB.toFixed(1);
+  document.getElementById('avgRankAfter').textContent = '#' + avgA.toFixed(1);
+  document.getElementById('avgRankImprove').textContent = '▲ ' + (avgB - avgA).toFixed(1) + ' positions improvement';
+  const top3B = beforeGrid.filter(v => v <= 3).length;
+  const top3A = afterGrid.filter(v => v <= 3).length;
+  document.getElementById('top3Count').textContent = top3A + ' / 81';
+  document.getElementById('top3Delta').textContent = '▲ ' + (top3A - top3B) + ' more grid points in top 3';
+  document.getElementById('reachPct').textContent = Math.round((top3A / 81) * 100) + '%';
+}
+function drawHeatmap(elId, grid) {
+  const el = document.getElementById(elId);
+  el.querySelectorAll('.heatmap-dot').forEach(n => n.remove());
+  const cols = 9, rows = 9, padX = 5, padY = 5;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v = grid[r * cols + c];
+      const dot = document.createElement('div');
+      dot.className = 'heatmap-dot';
+      dot.style.background = rankColor(v);
+      dot.style.left = (padX + (c * (100 - padX * 2)) / (cols - 1)) + '%';
+      dot.style.top = (padY + (r * (100 - padY * 2)) / (rows - 1)) + '%';
+      dot.textContent = v;
+      el.appendChild(dot);
+    }
+  }
+}
+function renderVisibility(c) {
+  const labels = c.keywords.map(k => k.kw);
+  const gB = c.keywords.map(k => k.gBefore);
+  const gA = c.keywords.map(k => k.gAfter);
+  const aB = c.keywords.map(k => k.aBefore);
+  const aA = c.keywords.map(k => k.aAfter);
+  if (charts.google) charts.google.destroy();
+  charts.google = new Chart(document.getElementById('googleChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Before', data: gB, backgroundColor: '#ff9933' }, { label: 'After', data: gA, backgroundColor: '#1e88e5' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+  if (charts.ai) charts.ai.destroy();
+  charts.ai = new Chart(document.getElementById('aiChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Before', data: aB, backgroundColor: '#c0392b' }, { label: 'After', data: aA, backgroundColor: '#00aeef' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+  const tbody = document.getElementById('visTableBody');
+  tbody.innerHTML = '';
+  c.keywords.forEach(k => {
+    const totalBefore = k.gBefore + k.aBefore;
+    const totalAfter = k.gAfter + k.aAfter;
+    const lift = totalBefore > 0 ? Math.round((totalAfter / totalBefore - 1) * 100) : 100;
+    const row = document.createElement('tr');
+    row.innerHTML = '<td><strong>' + k.kw + '</strong></td><td>' + k.gBefore.toLocaleString() + '</td><td>' + k.gAfter.toLocaleString() + '</td><td>' + k.aBefore.toLocaleString() + '</td><td>' + k.aAfter.toLocaleString() + '</td><td><span class="badge won">▲ ' + lift.toLocaleString() + '%</span></td>';
+    tbody.appendChild(row);
+  });
+}
+function renderLeads(c, beforeD, curD) {
+  const totalLeads = c.monthly.leads.reduce((a, b) => a + b, 0);
+  const totalConv = c.monthly.conversions.reduce((a, b) => a + b, 0);
+  const totalRev = c.monthly.revenue.reduce((a, b) => a + b, 0);
+  const convRate = totalLeads > 0 ? ((totalConv / totalLeads) * 100).toFixed(1) : 0;
+  const cac = totalConv > 0 ? Math.round(totalRev / totalConv / 12) : 0;
+  document.getElementById('totalLeads').textContent = totalLeads.toLocaleString();
+  document.getElementById('totalLeadsDelta').textContent = '▲ since ' + fmt(beforeD);
+  document.getElementById('totalConv').textContent = totalConv.toLocaleString();
+  document.getElementById('convRatePct').textContent = convRate + '%';
+  const _cr = parseFloat(convRate);
+  document.getElementById('convRateDelta').textContent = _cr >= 20 ? ('▲ ' + (_cr - 20).toFixed(1) + ' pts above industry avg') : ('▼ ' + (20 - _cr).toFixed(1) + ' pts below industry avg');
+  document.getElementById('convRate').textContent = 'leads becoming patients';
+  document.getElementById('totalRev').textContent = '$' + totalRev.toLocaleString();
+  document.getElementById('revDelta').textContent = '▲ over ' + Math.round(TOTAL_PERIOD_DAYS / 30) + ' months';
+  document.getElementById('cac').textContent = '$' + cac.toLocaleString();
+  const labels = [];
+  const step = Math.floor(TOTAL_PERIOD_DAYS / 5);
+  for (let i = 0; i < 6; i++) {
+    const d = addDays(beforeD, step * i);
+    labels.push(d.toLocaleDateString('en-US', { month: 'short' }));
+  }
+  if (charts.leads) charts.leads.destroy();
+  charts.leads = new Chart(document.getElementById('leadsChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Leads', data: c.monthly.leads, backgroundColor: '#1e88e5' }, { label: 'Conversions', data: c.monthly.conversions, backgroundColor: '#2ecc71' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+  if (charts.rev) charts.rev.destroy();
+  const ctxR = document.getElementById('revChart').getContext('2d');
+  const grad = ctxR.createLinearGradient(0, 0, 0, 300);
+  grad.addColorStop(0, 'rgba(46,204,113,0.55)');
+  grad.addColorStop(1, 'rgba(46,204,113,0.02)');
+  charts.rev = new Chart(ctxR, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Revenue ($)', data: c.monthly.revenue, borderColor: '#2ecc71', backgroundColor: grad, fill: true, tension: 0.35, borderWidth: 3, pointRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } } }
+  });
+  const tbody = document.getElementById('leadsTableBody');
+  tbody.innerHTML = '';
+  c.leadsTable.forEach(l => {
+    const d = addDays(curD, l.offsetDays);
+    const row = document.createElement('tr');
+    row.innerHTML = '<td>' + fmt(d) + '</td><td>' + l.patient + '</td><td>' + l.svc + '</td><td>' + l.src + '</td><td><span class="badge ' + l.status + '">' + l.status.toUpperCase() + '</span></td><td>$' + l.value.toLocaleString() + '</td>';
+    tbody.appendChild(row);
+  });
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+
+showScreen('login');
+</script>
+</body>
+</html>
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+>
+left = (padX + (c * (100 - padX * 2)) / (cols - 1)) + '%';
+      dot.style.top = (padY + (r * (100 - padY * 2)) / (rows - 1)) + '%';
+      dot.textContent = v;
+      el.appendChild(dot);
+    }
+  }
+}
+function renderVisibility(c) {
+  const labels = c.keywords.map(k => k.kw);
+  const gB = c.keywords.map(k => k.gBefore);
+  const gA = c.keywords.map(k => k.gAfter);
+  const aB = c.keywords.map(k => k.aBefore);
+  const aA = c.keywords.map(k => k.aAfter);
+  if (charts.google) charts.google.destroy();
+  charts.google = new Chart(document.getElementById('googleChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Before', data: gB, backgroundColor: '#ff9933' }, { label: 'After', data: gA, backgroundColor: '#1e88e5' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+  if (charts.ai) charts.ai.destroy();
+  charts.ai = new Chart(document.getElementById('aiChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Before', data: aB, backgroundColor: '#c0392b' }, { label: 'After', data: aA, backgroundColor: '#00aeef' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+  const tbody = document.getElementById('visTableBody');
+  tbody.innerHTML = '';
+  c.keywords.forEach(k => {
+    const totalBefore = k.gBefore + k.aBefore;
+    const totalAfter = k.gAfter + k.aAfter;
+    const lift = totalBefore > 0 ? Math.round((totalAfter / totalBefore - 1) * 100) : 100;
+    const row = document.createElement('tr');
+    row.innerHTML = '<td><strong>' + k.kw + '</strong></td><td>' + k.gBefore.toLocaleString() + '</td><td>' + k.gAfter.toLocaleString() + '</td><td>' + k.aBefore.toLocaleString() + '</td><td>' + k.aAfter.toLocaleString() + '</td><td><span class="badge won">UP ' + lift.toLocaleString() + '%</span></td>';
+    tbody.appendChild(row);
+  });
+}
+function renderLeads(c, beforeD, curD) {
+  const totalLeads = c.monthly.leads.reduce((a, b) => a + b, 0);
+  const totalConv = c.monthly.conversions.reduce((a, b) => a + b, 0);
+  const totalRev = c.monthly.revenue.reduce((a, b) => a + b, 0);
+  const convRate = totalLeads > 0 ? ((totalConv / totalLeads) * 100).toFixed(1) : 0;
+  const cac = totalConv > 0 ? Math.round(totalRev / totalConv / 12) : 0;
+  document.getElementById('totalLeads').textContent = totalLeads.toLocaleString();
+  document.getElementById('totalLeadsDelta').textContent = 'UP since ' + fmt(beforeD);
+  document.getElementById('totalConv').textContent = totalConv.toLocaleString();
+  document.getElementById('convRatePct').textContent = convRate + '%';
+  const _cr = parseFloat(convRate);
+  document.getElementById('convRateDelta').textContent = _cr >= 20 ? ('▲ ' + (_cr - 20).toFixed(1) + ' pts above industry avg') : ('▼ ' + (20 - _cr).toFixed(1) + ' pts below industry avg');
+  document.getElementById('convRate').textContent = 'leads becoming patients';
+  document.getElementById('totalRev').textContent = '$' + totalRev.toLocaleString();
+  document.getElementById('revDelta').textContent = 'UP over ' + Math.round(TOTAL_PERIOD_DAYS / 30) + ' months';
+  document.getElementById('cac').textContent = '$' + cac.toLocaleString();
+  const labels = [];
+  const step = Math.floor(TOTAL_PERIOD_DAYS / 5);
+  for (let i = 0; i < 6; i++) {
+    const d = addDays(beforeD, step * i);
+    labels.push(d.toLocaleDateString('en-US', { month: 'short' }));
+  }
+  if (charts.leads) charts.leads.destroy();
+  charts.leads = new Chart(document.getElementById('leadsChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Leads', data: c.monthly.leads, backgroundColor: '#1e88e5' }, { label: 'Conversions', data: c.monthly.conversions, backgroundColor: '#2ecc71' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+  if (charts.rev) charts.rev.destroy();
+  const ctxR = document.getElementById('revChart').getContext('2d');
+  const grad = ctxR.createLinearGradient(0, 0, 0, 300);
+  grad.addColorStop(0, 'rgba(46,204,113,0.55)');
+  grad.addColorStop(1, 'rgba(46,204,113,0.02)');
+  charts.rev = new Chart(ctxR, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Revenue ($)', data: c.monthly.revenue, borderColor: '#2ecc71', backgroundColor: grad, fill: true, tension: 0.35, borderWidth: 3, pointRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } } }
+  });
+  const tbody = document.getElementById('leadsTableBody');
+  tbody.innerHTML = '';
+  c.leadsTable.forEach(l => {
+    const d = addDays(curD, l.offsetDays);
+    const row = document.createElement('tr');
+    row.innerHTML = '<td>' + fmt(d) + '</td><td>' + l.patient + '</td><td>' + l.svc + '</td><td>' + l.src + '</td><td><span class="badge ' + l.status + '">' + l.status.toUpperCase() + '</span></td><td>$' + l.value.toLocaleString() + '</td>';
+    tbody.appendChild(row);
+  });
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+204,113,0.02)');
+  charts.rev = new Chart(ctxR, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Revenue ($)', data: c.monthly.revenue, borderColor: '#2ecc71', backgroundColor: grad, fill: true, tension: 0.35, borderWidth: 3, pointRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } } }
+  });
+  const tbody = document.getElementById('leadsTableBody');
+  tbody.innerHTML = '';
+  c.leadsTable.forEach(l => {
+    const d = addDays(curD, l.offsetDays);
+    const row = document.createElement('tr');
+    row.innerHTML = '<td>' + fmt(d) + '</td><td>' + l.patient + '</td><td>' + l.svc + '</td><td>' + l.src + '</td><td><span class="badge ' + l.status + '">' + l.status.toUpperCase() + '</span></td><td>$' + l.value.toLocaleString() + '</td>';
+    tbody.appendChild(row);
+  });
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+>
+electorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+d('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+ick', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+ve('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+>
+);
+</script>
+</body>
+</html>
+ l.src + '</td><td><span class="badge ' + l.status + '">' + l.status.toUpperCase() + '</span></td><td>$' + l.value.toLocaleString() + '</td>';
+    tbody.appendChild(row);
+  });
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+>
+rderColor: '#2ecc71', backgroundColor: grad, fill: true, tension: 0.35, borderWidth: 3, pointRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } } }
+  });
+  const tbody = document.getElementById('leadsTableBody');
+  tbody.innerHTML = '';
+  c.leadsTable.forEach(l => {
+    const d = addDays(curD, l.offsetDays);
+    const row = document.createElement('tr');
+    row.innerHTML = '<td>' + fmt(d) + '</td><td>' + l.patient + '</td><td>' + l.svc + '</td><td>' + l.src + '</td><td><span class="badge ' + l.status + '">' + l.status.toUpperCase() + '</span></td><td>$' + l.value.toLocaleString() + '</td>';
+    tbody.appendChild(row);
+  });
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    Object.values(charts).forEach(ch => ch && ch.resize());
+  });
+});
+document.getElementById('currentDate').addEventListener('change', renderAllDashboard);
+showScreen('login');
+</script>
+</body>
+</html>
+>
